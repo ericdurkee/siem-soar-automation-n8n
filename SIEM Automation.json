@@ -1,0 +1,371 @@
+{
+  "name": "SIEM Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "82a3b75e-35ba-4416-b2f1-2e1189b70e55",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -16,
+        -192
+      ],
+      "id": "9ab02f00-7e39-4536-b83e-fd287f647d80",
+      "name": "Webhook",
+      "webhookId": "82a3b75e-35ba-4416-b2f1-2e1189b70e55"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "5733a249-5dce-41f3-88fe-c54a22f5b52b",
+              "leftValue": "={{ $json.vt_severity }}",
+              "rightValue": "CRITICAL",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "88e64259-ecd4-4d07-a1f5-bdbcf75cdba2",
+              "leftValue": "={{ $json.vt_severity }}",
+              "rightValue": "HIGH",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        800,
+        32
+      ],
+      "id": "f4917819-2606-4aac-9d93-f937d5320c7b",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0APEKWPQ02",
+          "mode": "list",
+          "cachedResultName": "alerts"
+        },
+        "text": "=🚨 *Security Alert*    *Alert ID:* {{$json.alert_id}}   *Type:* {{$json.alert_type}}   *Time:* {{$json.timestamp}}    *Traffic*   • Source IP: {{$json.source_ip}}   • Destination IP: {{$json.destination_ip}}    *SIEM Severity:* {{$json.severity}}   *VT Severity:* {{$json.vt_severity}} ({{$json.vt_confidence}} confidence)    *VirusTotal Analysis*   • Verdict: *{{$json.vt_verdict}}*   • Malicious: {{$json.vt_malicious}}   • Suspicious: {{$json.vt_suspicious}}    *Threat Context*   • TOR Exit Node: {{$json.is_tor}}  ",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1008,
+        112
+      ],
+      "id": "eedb7c06-8c11-4281-8532-7cc9c9f7a288",
+      "name": "Low Severity Alert",
+      "webhookId": "4d1429c0-5f14-4c6e-b3e7-784158a71f25",
+      "credentials": {
+        "slackApi": {
+          "id": "doS0HWBV2eWXHDdR",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C0APQSR1B29",
+          "mode": "list",
+          "cachedResultName": "critical-alerts"
+        },
+        "text": "=🚨 *Security Alert*  \n\n*Alert ID:* {{$json.alert_id}}  \n*Type:* {{$json.alert_type}}  \n*Time:* {{$json.timestamp}}  \n\n*Traffic*  \n• Source IP: {{$json.source_ip}}  \n• Destination IP: {{$json.destination_ip}}  \n\n*SIEM Severity:* {{$json.severity}}  \n*VT Severity:* {{$json.vt_severity}} ({{$json.vt_confidence}} confidence)  \n\n*VirusTotal Analysis*  \n• Verdict: *{{$json.vt_verdict}}*  \n• Malicious: {{$json.vt_malicious}}  \n• Suspicious: {{$json.vt_suspicious}}  \n*AbuseIPDB Analysis*\n• Score: {{ $json.abuse_score }}\n• Reports #: {{ $json.abuse_reports }}\n• Domain: {{ $json.abuse_domain }}\n\n*Threat Context*  \n• TOR Exit Node: {{$json.is_tor}}  ",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.4,
+      "position": [
+        1008,
+        -48
+      ],
+      "id": "c642165e-451c-447d-b3ed-684ef333ddd2",
+      "name": "High/Critical Severity Alert",
+      "webhookId": "01a11e69-caf3-46b3-aec9-46bc8d9d0160",
+      "credentials": {
+        "slackApi": {
+          "id": "doS0HWBV2eWXHDdR",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const alert = $('Code Node1').first().json;\n\n// get both inputs from Merge\nconst vt = $input.all()[0].json || {};\nconst abuse = $input.all()[1].json || {};\n\n// VirusTotal safe access\nconst stats = vt?.data?.attributes?.last_analysis_stats || {};\nconst tags = vt?.data?.attributes?.tags || [];\n\nconst malicious = stats.malicious || 0;\nconst suspicious = stats.suspicious || 0;\nconst harmless = stats.harmless || 0;\n\n// AbuseIPDB safe access\nconst abuseData = abuse?.data || {};\nconst abuseScore = abuseData.abuseConfidenceScore || 0;\nconst abuseReports = abuseData.totalReports || 0;\nconst abuseDomain = abuseData.domain || \"N/A\";\nconst isTor = abuseData.isTor || false;\n\n// VT Severity\nlet vt_severity = \"LOW\";\nlet vt_confidence = \"LOW\";\n\nif (malicious >= 15) {\n  vt_severity = \"CRITICAL\";\n  vt_confidence = \"HIGH\";\n} else if (malicious >= 8) {\n  vt_severity = \"HIGH\";\n  vt_confidence = \"HIGH\";\n} else if (malicious >= 3 || suspicious >= 5) {\n  vt_severity = \"MEDIUM\";\n  vt_confidence = \"MEDIUM\";\n}\n\n// Optional downgrade\nif (harmless > 50 && malicious === 0) {\n  vt_severity = \"LOW\";\n  vt_confidence = \"HIGH\";\n}\n\n// Verdict\nlet vt_verdict = \"clean\";\nif (malicious > 0) vt_verdict = \"malicious\";\nelse if (suspicious > 0) vt_verdict = \"suspicious\";\n\nreturn [{\n  json: {\n    alert_id: alert.alert_id,\n    source_ip: alert.source_ip,\n    destination_ip: alert.destination_ip,\n    severity: alert.severity,\n    alert_type: alert.alert_type,\n    timestamp: alert.timestamp,\n    status: alert.status,\n\n    // VirusTotal\n    vt_malicious: malicious,\n    vt_harmless: harmless,\n    vt_suspicious: suspicious,\n    vt_severity,\n    vt_confidence,\n    vt_verdict,\n\n    // AbuseIPDB\n    abuse_score: abuseScore,\n    abuse_reports: abuseReports,\n    abuse_domain: abuseDomain,\n    is_tor: isTor\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        624,
+        32
+      ],
+      "id": "b3072c43-bb3e-4d58-949b-f4154ada1099",
+      "name": "Code Node"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Loop over input items and add a new field called 'myNewField' to the JSON of each one\nconst alert = $input.all()[0].json.body;\n\nconst alert_id = alert.alert_id;\nconst source_ip = alert.source_ip;\nconst severity = alert.severity;\nconst alert_type = alert.alert_type;\nconst timestamp = alert.timestamp;\nconst destination_ip = alert.destination_ip;\n\nreturn [{ json: { alert_id, source_ip, destination_ip, severity, alert_type, timestamp, }}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        96,
+        32
+      ],
+      "id": "d47c70bd-f5e5-42c6-a5a0-1af1d45734e7",
+      "name": "Code Node1"
+    },
+    {
+      "parameters": {
+        "curlImport": "",
+        "httpVariantWarning": "",
+        "method": "GET",
+        "url": "=https://www.virustotal.com/api/v3/ip_addresses/{{ $json.source_ip }}",
+        "": "",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "virusTotalApi",
+        "provideSslCertificates": false,
+        "sendQuery": false,
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Apikey",
+              "value": "f4fd302ce3f7569dc0f60769585bada8d6a14ff893836dda009b11fd6ebbb1f7"
+            }
+          ]
+        },
+        "sendBody": false,
+        "options": {},
+        "infoMessage": ""
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        272,
+        32
+      ],
+      "id": "225d0a5a-1599-4c5c-a6f1-3bbda79ceb6f",
+      "name": "VirusTotal Evaluation",
+      "extendsCredential": "virusTotalApi",
+      "alwaysOutputData": false,
+      "credentials": {
+        "virusTotalApi": {
+          "id": "rrRYas463X5slpea",
+          "name": "VirusTotal account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "url": "https://api.abuseipdb.com/api/v2/check",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "ipAddress",
+              "value": "={{ $json.source_ip }}"
+            },
+            {
+              "name": "maxAgeInDays",
+              "value": "90"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "n8n"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        272,
+        160
+      ],
+      "id": "f948731c-753d-4ba7-8acc-88f81eb96658",
+      "name": "AbuseIPDB",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "H6E5mWt2ouwhq71h",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        464,
+        32
+      ],
+      "id": "8fd27d71-f918-4687-ab59-3618ffb8d04e",
+      "name": "Merge"
+    }
+  ],
+  "pinData": {
+    "Code Node": [
+      {
+        "json": {
+          "alert_id": "SOC-001",
+          "source_ip": "185.220.101.45",
+          "destination_ip": "10.0.0.5",
+          "severity": "low",
+          "alert_type": "port_scan_detected",
+          "timestamp": "2026-03-27T14:32:00Z",
+          "vt_malicious": 17,
+          "vt_harmless": 46,
+          "vt_suspicious": 3,
+          "vt_severity": "CRITICAL",
+          "vt_confidence": "HIGH",
+          "vt_verdict": "malicious",
+          "abuse_score": 100,
+          "abuse_reports": 98,
+          "abuse_domain": "for-privacy[.]net",
+          "is_tor": true
+        }
+      }
+    ]
+  },
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code Node1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "High/Critical Severity Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Low Severity Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Node": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code Node1": {
+      "main": [
+        [
+          {
+            "node": "VirusTotal Evaluation",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AbuseIPDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "VirusTotal Evaluation": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AbuseIPDB": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Code Node",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "0f5ae7e0-1167-45df-9776-8da18a29d839",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "a08bcda893822e43c27f178ca831ff4d4e04eb47db9ee619eaa62f950e88d1c6"
+  },
+  "id": "EMqeoaPGqghY0IgQ",
+  "tags": []
+}
