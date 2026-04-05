@@ -7,12 +7,12 @@ This project simulates a SOC automation workflow that ingests security alerts, e
 Webhook → Parsing → VirusTotal → AbuseIPDB → Merge → Scoring → Routing → Slack
 
 ## Features
-- 🔍 VirusTotal enrichment (malicious/suspicious analysis)
-- 🌐 AbuseIPDB enrichment (abuse confidence, TOR detection)
-- 🧠 Severity scoring logic (LOW → CRITICAL)
-- 🚫 Alert deduplication
-- 🔀 Conditional routing (HIGH/CRITICAL → Slack alerts)
-- 🔗 Safe URL formatting (non-clickable indicators)
+- VirusTotal enrichment (malicious/suspicious analysis)
+- AbuseIPDB enrichment (abuse confidence, TOR detection)
+- Severity scoring logic (LOW → CRITICAL)
+- Alert deduplication
+- Conditional routing (HIGH/CRITICAL → Slack alerts)
+- Safe URL formatting (non-clickable indicators)
 
 ## Example Alert
 - Source IP: 185[.]220[.]101[.]45
