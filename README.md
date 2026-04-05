@@ -21,6 +21,9 @@ Webhook → Parsing → VirusTotal → AbuseIPDB → Merge → Scoring → Routi
 - Abuse Score: 100
 - TOR Exit Node: True
 
+## Example Output on Slack
+![SlackOutput](./slackchat.png)
+
 ## Technologies Used
 - n8n (workflow automation)
 - VirusTotal API
