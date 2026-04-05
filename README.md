@@ -5,6 +5,7 @@ This project simulates a SOC automation workflow that ingests security alerts, e
 
 ## Architecture
 Webhook → Parsing → VirusTotal → AbuseIPDB → Merge → Scoring → Routing → Slack
+![SIEM Workflow](./n8nworkflow.png)
 
 ## Features
 - VirusTotal enrichment (malicious/suspicious analysis)
